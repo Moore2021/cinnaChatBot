@@ -1,26 +1,28 @@
 "use strict"
-const {
-    Intents,
-    Client,
-    Collection
-} = require(`discord.js`);
+const Discord = require(`discord.js`);
 const fs = require(`fs`);
-const client = new Client({
-    intents: [Intents.FLAGS.GUILDS]
+const client = new Discord.Client({
+    intents: [
+        Discord.GatewayIntentBits.Guilds,
+        Discord.GatewayIntentBits.GuildMessages,
+        Discord.GatewayIntentBits.GuildMessageReactions,
+        Discord.GatewayIntentBits.MessageContent
+    ]
 });
+const Redis= require(`async-redis`)
 
-client.commands = new Collection();
+client.commands = new Discord.Collection();
+client.openai = new Discord.Collection();
 
 class Bot {
     constructor() {
         this.paths = {
             "events": `./src/events`,
+            "openai": `./src/openai`,
             "handlers": {
                 "src": `./src/handlers`,
                 "relative": `./handlers`
             },
-            "database": `./src/database`,
-            "utility": `./src/utils`,
             "commands": `./src/commands`
         }
         this.prepareToLogin()
@@ -36,9 +38,8 @@ class Bot {
 
     retrieveAllFilesNeeded() {
         this.eventFiles = this.getJSFilesFromFolder(this.paths.events);
+        this.openaiFiles = this.getJSFilesFromFolder(this.paths.openai);
         this.handlers = this.getJSFilesFromFolder(this.paths.handlers.src);
-        this.databaseFiles = this.getJSFilesFromFolder(this.paths.database);
-        this.utilityFiles = this.getJSFilesFromFolder(this.paths.utility);
         this.commandFolders = this.getFoldersFromAFolder(this.paths.commands);
     }
 
@@ -49,20 +50,13 @@ class Bot {
     }
 
     async initializeHandlers() {
-        await client.handleDatabase(this.databaseFiles, this.paths.database);
         await client.handleEvents(this.eventFiles, this.paths.events);
         await client.handleCommands(this.commandFolders, this.paths.commands);
-        await client.handleUtils(this.utilityFiles, this.paths.utility);
+        await client.handleOpenai(this.openaiFiles, this.paths.openai);
     }
 
     login() {
         client.login(process.env.TOKEN);
-    }
-
-    async connectToDB(){
-        await client.databaseClasses.DatabaseInit.connectToDatabase();
-        client.pgClient = client.databaseClasses.DatabaseInit.pgClient
-        client.redis = client.databaseClasses.redis
     }
 
     async prepareToLogin() {
@@ -71,7 +65,7 @@ class Bot {
             this.retrieveAllFilesNeeded();
             this.setupFunctionFolderRequireModules();
             await this.initializeHandlers();
-            await this.connectToDB()
+            // await this.connectRedis();
             this.login()
         } catch (error) {
             console.error(`Client has failed to start >\n ${error.stack}`)
@@ -79,6 +73,24 @@ class Bot {
         } finally {
             console.log(`Ready for operation`)
         }
+    }
+
+    /**
+     * Opening redis database connection
+     * @return {void}
+     */
+    async connectRedis() {
+        const redis = await Redis.createClient();
+
+        redis.on(`error`, err => {
+            console.error(`REDIS <ERROR> ${err.message}`)
+            process.exit()
+        })
+        redis.on(`connect`, async () => {
+            console.log(`REDIS <CONNECTED>`)
+            client.redis = redis
+        })
+        
     }
 }
 
