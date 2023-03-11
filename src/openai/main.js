@@ -21,14 +21,35 @@ module.exports = {
 	async execute(message, client) {
 		const PreviousOpenAiModel = require(`../../.data/pochitaConvo.json`)
 		const conversation = startOpenAiModel.messages.concat(PreviousOpenAiModel.messages)
+		var charRepeats = function(str) {
+			str = str.toLowerCase()
+			for (var i=0; i<str.length; i++) {
+			  if ( str.indexOf(str[i]) !== str.lastIndexOf(str[i]) ) {
+				return false; // repeats
+			  }
+			}
+			const J = `{"messages":[]}`
+				fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err)=>{
+					if (err) return console.log(err);
+				});
+		  return true;
+		}
+
+		const whatToSend = conversation.concat([{"role": "user","content":`${message.author.username} said: ${message.content}`}])
+		
 		try {
 			const completion = await openai.createChatCompletion({
 				model: "gpt-3.5-turbo",
 				max_tokens:2000,
 				frequency_penalty: -1.0,
-				messages: conversation.concat([{"role": "user","content":`${message.author.username} said: ${message.content}`}])
+				messages: whatToSend
 			});
-			const response = completion.data.choices[0].message.content
+			var response = completion.data.choices[0].message.content
+			if (response.length > 1500) response = response.slice(0,1500)
+			if (charRepeats(response)) {
+				message.channel.sendTyping()
+				return message.channel.send(`I'm sorry but i think i was bonked by something and i forgot what we were saying`)
+			}
 			PreviousOpenAiModel.messages.push({"role": "user","content":`${message.author.username} said: ${message.content}`})
 			PreviousOpenAiModel.messages.push({"role": "assistant","content":response})
 			if (PreviousOpenAiModel.messages.length > 10) PreviousOpenAiModel.messages = PreviousOpenAiModel.messages.slice(PreviousOpenAiModel.messages.length-6)
@@ -36,6 +57,7 @@ module.exports = {
 			fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err)=>{
 				if (err) return console.log(err);
 			});
+			message.channel.sendTyping()
 			return message.channel.send(response)
 		} catch (error) {
 			if (error.response) {
@@ -44,6 +66,12 @@ module.exports = {
 			} else {
 				console.log(error.message);
 			}
+			const J = `{"messages":[]}`
+			fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err)=>{
+				if (err) return console.log(err);
+			});
+			message.channel.sendTyping()
+			return message.channel.send(`I'm sorry but i think i was bonked by something and i forgot what we were saying`)
 		}
 	}
 }
