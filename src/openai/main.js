@@ -21,43 +21,55 @@ module.exports = {
 	async execute(message, client) {
 		const PreviousOpenAiModel = require(`../../.data/pochitaConvo.json`)
 		const conversation = startOpenAiModel.messages.concat(PreviousOpenAiModel.messages)
-		var charRepeats = function(str) {
-			str = str.toLowerCase()
-			for (var i=0; i<str.length; i++) {
-			  if ( str.indexOf(str[i]) !== str.lastIndexOf(str[i]) ) {
-				return false; // repeats
-			  }
-			}
-			const J = `{"messages":[]}`
-				fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err)=>{
-					if (err) return console.log(err);
-				});
-		  return true;
-		}
+		var isRepeating = (str = '') => {
+			if (!str.length) {
+				return false
+			};
+			for (let j = 1; (j <= str.length / 2); j++) {
+				if (str.length % j != 0) {
+					continue
+				};
+				let flag = true;
+				for (let i = j; i < str.length; ++i) {
+					if (str[i] != str[i - j]) {
+						flag = false;
+						break;
+					};
+				};
+				if (flag) {
+					const J = `{"messages":[]}`
+					fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err) => {
+						if (err) return console.log(err);
+					});
+					return true;
+				};
+			};
+			return false;
+		};
 
-		const whatToSend = conversation.concat([{"role": "user","content":`${message.author.username} said: ${message.content}`}])
-		
+		const whatToSend = conversation.concat([{ "role": "user", "content": `${message.author.username} said: ${message.content}` }])
+
+		message.channel.sendTyping()
+
 		try {
 			const completion = await openai.createChatCompletion({
 				model: "gpt-3.5-turbo",
-				max_tokens:2000,
+				max_tokens: 2000,
 				frequency_penalty: -1.0,
 				messages: whatToSend
-			});
+			},{timeout:10000});
 			var response = completion.data.choices[0].message.content
-			if (response.length > 1500) response = response.slice(0,1500)
-			if (charRepeats(response)) {
-				message.channel.sendTyping()
+			if (response.length > 1500) response = response.slice(0, 1500)
+			if (isRepeating(response)) {
 				return message.channel.send(`I'm sorry but i think i was bonked by something and i forgot what we were saying`)
 			}
-			PreviousOpenAiModel.messages.push({"role": "user","content":`${message.author.username} said: ${message.content}`})
-			PreviousOpenAiModel.messages.push({"role": "assistant","content":response})
-			if (PreviousOpenAiModel.messages.length > 10) PreviousOpenAiModel.messages = PreviousOpenAiModel.messages.slice(PreviousOpenAiModel.messages.length-6)
+			PreviousOpenAiModel.messages.push({ "role": "user", "content": `${message.author.username} said: ${message.content}` })
+			PreviousOpenAiModel.messages.push({ "role": "assistant", "content": response })
+			if (PreviousOpenAiModel.messages.length > 10) PreviousOpenAiModel.messages = PreviousOpenAiModel.messages.slice(PreviousOpenAiModel.messages.length - 6)
 			const J = JSON.stringify(PreviousOpenAiModel)
-			fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err)=>{
+			fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err) => {
 				if (err) return console.log(err);
 			});
-			message.channel.sendTyping()
 			return message.channel.send(response)
 		} catch (error) {
 			if (error.response) {
@@ -67,10 +79,9 @@ module.exports = {
 				console.log(error.message);
 			}
 			const J = `{"messages":[]}`
-			fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err)=>{
+			fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err) => {
 				if (err) return console.log(err);
 			});
-			message.channel.sendTyping()
 			return message.channel.send(`I'm sorry but i think i was bonked by something and i forgot what we were saying`)
 		}
 	}
