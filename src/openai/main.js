@@ -71,7 +71,6 @@ module.exports = {
 		people_ids_noDup = [...people_ids_noDup].filter(Boolean)
 		if (people_ids_noDup.length > 1) {
 			for (const person of people_ids_noDup){
-				console.log(person)
 				const member = await message.guild.members.fetch(person)
 				if (member.user.id == `221828709269766147`) continue;
 				if (member.nickname) addSysContext(`\"${member.user.username}\" nickname is \"${member.nickname}\"`)
@@ -87,7 +86,7 @@ module.exports = {
 		const MAX_CONVOS = 6
 		
 		// Now add the user input
-		const enddingInstructions = ` - remove unnecessary parts in your response but you still bark \"wauf\", act like a talking dog.`
+		const enddingInstructions = ` - remove unnecessary parts in your response but still be exact`
 		// const enddingInstructions = ``
 		const whatToSend = pastConvo.concat([{ "role": "user", "content": `${message.author.username} said: ${message.content}${enddingInstructions}` }])
 		console.log(whatToSend)
