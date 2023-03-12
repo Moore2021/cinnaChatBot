@@ -106,7 +106,6 @@ module.exports = {
 				const nickToUse = await whatNicknameToUse(people_VC[i])
 				userNames_VC.push(nickToUse)		
 			}
-			console.log(userNames_VC)
 			const otherPeopleToString = userNames_VC.length >= 3 ? `${userNames_VC.slice(0,-1).join(`, `)} and ${userNames_VC.slice(-1)}` : userNames_VC.length >= 2 ? userNames_VC.join(` and `) : userNames_VC.toString()
 			addSysContext(`${NicknameToUse} is talking in VC with ${otherPeopleToString}`)
 		}
