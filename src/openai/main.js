@@ -15,16 +15,8 @@ module.exports = {
 	permissionLevel: 0,
 	async execute(message, client) {
 		
-		const PreviousOpenAiModel = require(`../../.data/pochitaConvo.json`)
 		const cachePeople = []
-		// who was recently in chat
-		const recentMsg = await message.channel.messages.fetch({limit:10,cache:true})
-		var people = new Set(recentMsg.map(m=>{if (!m.author.bot) {return `"${m.author.username}"`}else{return}} ))
-		var people_ids = new Set(recentMsg.map(m=>{if (!m.author.bot) {return m.author.id}else{return}} ))
-		people_ids = [...people_ids].filter(Boolean)
-		people = [...people].filter(Boolean)
-		cachePeople.push(people_ids)
-		const peopleToString = [...people].length >= 3 ? `${[...people].slice(0,-1).join(`,`)} and ${[...people].slice(-1)}` : [...people].length >= 2 ? [...people].join(` and `) : [...people].toString()
+		const PreviousOpenAiModel = require(`../../.data/pochitaConvo.json`)
 		const startOpenAiModel = {
 			"messages":
 				[
@@ -34,7 +26,8 @@ module.exports = {
 					}
 				]
 			};
-		// Fetch who's in VC
+
+		// Functions to use in file
 		const addSysContext = (str) =>{
 			return startOpenAiModel.messages[0].content+=`\n, ${str}`
 		}
@@ -46,11 +39,23 @@ module.exports = {
 			});
 			message.channel.send(`I'm sorry but i think i was bonked by something and i forgot what we were saying`)
 		}
+		
 
+		// who was recently in chat
+		const recentMsg = await message.channel.messages.fetch({limit:10,cache:true})
+		var people = new Set(recentMsg.map(m=>{if (!m.author.bot) {return `"${m.author.username}"`}else{return}} ))
+		var people_ids = new Set(recentMsg.map(m=>{if (!m.author.bot) {return m.author.id}else{return}} ))
+		people_ids = [...people_ids].filter(Boolean)
+		people = [...people].filter(Boolean)
+		cachePeople.push(people_ids)
+		const peopleToString = [...people].length >= 3 ? `${[...people].slice(0,-1).join(`,`)} and ${[...people].slice(-1)}` : [...people].length >= 2 ? [...people].join(` and `) : [...people].toString()
+		
+		// Add system context
 		addSysContext(`Cinnamonbuniii nickname is cinna, cinna is your master`)
 		addSysContext(`Current time is: ${new Date().toUTCString()}`)
 		addSysContext(`The recent chatters in this channel are ${peopleToString}`)
-		
+
+		// Fetch who's in VC
 		// If people are in the same VC
 		if (message.member.voice.channel){
 			addSysContext(`${message.author.username} is connected to the VC ${message.member.voice.channel.name}`)
@@ -79,19 +84,23 @@ module.exports = {
 			const member = await message.guild.members.fetch(people_ids_noDup[0])
 			if (member.user.id != `221828709269766147`) addSysContext(`\"${member.user.username}\" nickname is \"${member.nickname}\"`)
 		}
-		
 
-
+		// Handle past convos
 		const pastConvo = startOpenAiModel.messages.concat(PreviousOpenAiModel.messages)
 		const MAX_CONVOS = 6
 		
 		// Now add the user input
 		const enddingInstructions = ` - dont talk in quotes and change your pattern of talking`
-		// const enddingInstructions = ``
+
+		// Prepare the payload for api
 		const whatToSend = pastConvo.concat([{ "role": "user", "content": `${message.author.username} said: ${message.content}${enddingInstructions}` }])
-		console.log(whatToSend)
+
+		// Debug purpose
+		// console.debug(whatToSend)
+		
+		// If there are too many conversations cut them in half
 		if (PreviousOpenAiModel.messages.length > MAX_CONVOS) PreviousOpenAiModel.messages = PreviousOpenAiModel.messages.slice(PreviousOpenAiModel.messages.length - (MAX_CONVOS/2))
-		message.channel.sendTyping()
+		message.channel.sendTyping() // To show bot is typing/thinking
 
 		try {
 			const completion = await openai.createChatCompletion({
@@ -100,11 +109,19 @@ module.exports = {
 				frequency_penalty: -1.6,
 				messages: whatToSend
 			},{timeout:50000});
+
+			// What the api returned
 			var response = completion.data.choices[0].message.content
-			if (response.length > 1500) response = response.slice(0, 1500)
+			if (response.length > 1500) response = response.slice(0, 1500) // If the response exceeds Discord's text limit
+			
+			// Prepare to save to conversation file
 			PreviousOpenAiModel.messages.push({ "role": "user", "content": `${message.author.username} said: ${message.content}${enddingInstructions}` })
-			PreviousOpenAiModel.messages.push({ "role": "assistant", "content": response })
+			PreviousOpenAiModel.messages.push({ "role": "assistant", "content": `${response}` })
+
+			// If there are too many conversations cut them in half
 			if (PreviousOpenAiModel.messages.length > MAX_CONVOS) PreviousOpenAiModel.messages = PreviousOpenAiModel.messages.slice(PreviousOpenAiModel.messages.length - (MAX_CONVOS/2))
+
+			// Write to conversation file
 			const J = JSON.stringify(PreviousOpenAiModel)
 			fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err) => {
 				if (err) return console.log(err);
