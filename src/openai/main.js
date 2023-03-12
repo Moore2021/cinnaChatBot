@@ -92,7 +92,7 @@ module.exports = {
 		const enddingInstructions = ` - dont talk in quotes and change your pattern of talking`
 
 		// Prepare the payload for api
-		const msgFromUser = { "role": "user", "content": `${message.author.username} said: "${message.content}"${enddingInstructions}` }
+		const msgFromUser = { "role": "user", "content": `${message.author.username} said: "${message.content.trim()}"${enddingInstructions}` }
 		const whatToSend = pastConvo.concat([msgFromUser])
 
 		// Debug purpose
@@ -111,7 +111,7 @@ module.exports = {
 			},{timeout:50000});
 
 			// What the api returned
-			var response = completion.data.choices[0].message.content
+			var response = completion.data.choices[0].message.content.trim()
 			if (response.length > 1500) response = response.slice(0, 1500) // If the response exceeds Discord's text limit
 			
 			// Prepare to save to conversation file
