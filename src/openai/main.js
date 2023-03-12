@@ -90,7 +90,7 @@ module.exports = {
 		const MAX_CONVOS = 6
 		
 		// Now add the user input
-		const enddingInstructions = ` - dont talk in quotes and change your pattern of talking`
+		const enddingInstructions = `(dont talk in quotes and change your pattern of talking)`
 
 		// Prepare the payload for api
 		const whatToSend = pastConvo.concat([{ "role": "user", "content": `${message.author.username} said: ${message.content}${enddingInstructions}` }])
