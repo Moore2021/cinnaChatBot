@@ -1,5 +1,7 @@
 "use strict"
 const Discord = require(`discord.js`);
+const Nicknames = require(`../.data/nicknames.json`)
+const oldConvo = require(`../.data/pochitaConvo.json`)
 const fs = require(`fs`);
 const client = new Discord.Client({
     intents: [
@@ -55,6 +57,14 @@ class Bot {
         await client.handleOpenai(this.openaiFiles, this.paths.openai);
     }
 
+    initNicknames(){
+        client.nicknames = Nicknames
+    }
+
+    initOldConvo(){
+        client.pastConvo = oldConvo
+    }
+
     login() {
         client.login(process.env.TOKEN);
     }
@@ -65,6 +75,8 @@ class Bot {
             this.retrieveAllFilesNeeded();
             this.setupFunctionFolderRequireModules();
             await this.initializeHandlers();
+            this.initNicknames()
+            this.initOldConvo()
             // await this.connectRedis();
             this.login()
         } catch (error) {

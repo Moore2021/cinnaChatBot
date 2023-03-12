@@ -9,6 +9,9 @@ module.exports = {
     description: `Recent the convo history`,
     type: ApplicationCommandType.ChatInput,
     async execute(interaction, client) {
+        client.pastConvo.messages=[]
+        console.log(`in reset client.pastConvo.messages`)
+        console.log(client.pastConvo.messages)
         const J = `{"messages":[]}`
         fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err) => {
             if (err) return console.log(err);

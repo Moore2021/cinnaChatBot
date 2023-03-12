@@ -20,6 +20,7 @@ module.exports = {
     async execute(interaction, client) {
         const userChosenNickName = interaction.options.getString(`set`)
         Nicknames[interaction.member.id] = userChosenNickName
+        client.nicknames[interaction.member.id] = userChosenNickName
         const DataToSave = JSON.stringify(Nicknames)
         fs.writeFile('.data/nicknames.json', DataToSave, 'utf8', (err) => {
             if (err) return console.log(err);

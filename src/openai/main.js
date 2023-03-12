@@ -14,15 +14,14 @@ module.exports = {
 	description: `Get a response from OpenAi`,
 	permissionLevel: 0,
 	async execute(message, client) {
-		
-		const PreviousOpenAiModel = require(`../../.data/pochitaConvo.json`)
-		const Nicknames = require(`../../.data/nicknames.json`)
+		const PreviousOpenAiModel = client.pastConvo
+		const Nicknames = client.nicknames
 		const startOpenAiModel = {
 			"messages":
 				[
 					{
 						"role":"system",
-						"content":`You're on a roleplay, Your name is Pochita, you act like a talking dog and bark Wauf! your owner, master, and favourite is Cinna or Cinnamonbuniii.`
+						"content":`You're on a roleplay, Your name is Pochita, you act like a talking dog and bark Wauf! your owner, master, and favourite is Cinna or cinna.`
 					}
 				]
 			};
@@ -34,6 +33,7 @@ module.exports = {
 
 		const DELETE_HISTORY = () =>{
 			const J = `{"messages":[]}`
+			client.pastConvo.messages = []
 			fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err) => {
 				if (err) return console.log(err);
 			});
@@ -91,13 +91,13 @@ module.exports = {
 		
 		// Add system context
 		addSysContext(`Current date is: ${formatDate(new Date())}`)
-		addSysContext(`The recent chatters in this channel are ${peopleToString}`)
+		addSysContext(`people in chat: ${peopleToString}`)
 
 		// Fetch who's in VC
 		// If people are in the same VC
 		if (message.member.voice.channel){
 			const NicknameToUse = await whatNicknameToUse(message.author.id)
-			addSysContext(`${NicknameToUse} is connected to the VC ${message.member.voice.channel.name}`)
+			addSysContext(`${NicknameToUse} is connected to the vc ${message.member.voice.channel.name}`)
 			const membersInVC = message.member.voice.channel.members
 			var people_VC = new Set(membersInVC.map(m=>{if (!m.user.bot) {return `${m.user.id}`}else{return}} ))
 			people_VC = [...people_VC].filter(Boolean)
@@ -107,11 +107,10 @@ module.exports = {
 				userNames_VC.push(nickToUse)		
 			}
 			const otherPeopleToString = userNames_VC.length >= 3 ? `${userNames_VC.slice(0,-1).join(`, `)} and ${userNames_VC.slice(-1)}` : userNames_VC.length >= 2 ? userNames_VC.join(` and `) : userNames_VC.toString()
-			addSysContext(`${NicknameToUse} is talking in VC with ${otherPeopleToString}`)
+			addSysContext(`people in vc or voice chat: ${otherPeopleToString}`)
 		}
 
-		// Handle past convos
-		const pastConvo = startOpenAiModel.messages.concat(PreviousOpenAiModel.messages)
+		const pastConvo = client.pastConvo.messages.length>1 ? client.pastConvo.messages : PreviousOpenAiModel.messages
 		const MAX_CONVOS = 6
 		
 		// Now add the user input
@@ -120,36 +119,43 @@ module.exports = {
 		// Prepare the payload for api
 		const NicknameToUse = await whatNicknameToUse(message.author.id)
 		const msgFromUser = { "role": "user", "content": `${NicknameToUse} said: "${message.content.trim()}"${enddingInstructions}` }
-		const whatToSend = pastConvo.concat([msgFromUser])
-
-		// Debug purpose
-		console.debug(whatToSend)
+		var whatToSend = pastConvo.concat([msgFromUser])
+		if (whatToSend.length > MAX_CONVOS) whatToSend = whatToSend.slice(whatToSend.length - (MAX_CONVOS/2))
+		
+		if (client.pastConvo.messages.length<1){
+			client.pastConvo.messages = whatToSend
+		}else {
+			client.pastConvo.messages.push(msgFromUser)
+		}
 		
 		// If there are too many conversations cut them in half
-		if (PreviousOpenAiModel.messages.length > MAX_CONVOS) PreviousOpenAiModel.messages = PreviousOpenAiModel.messages.slice(PreviousOpenAiModel.messages.length - (MAX_CONVOS/2))
 		message.channel.sendTyping() // To show bot is typing/thinking
 		
 		try {
+			const finalJoin = startOpenAiModel.messages.concat(whatToSend)
+			console.log(whatToSend)
 			const completion = await openai.createChatCompletion({
 				model: "gpt-3.5-turbo",
 				max_tokens: 2000,
 				frequency_penalty: -1.6,
-				messages: whatToSend
+				messages: finalJoin
 			},{timeout:50000});
 
 			// What the api returned
 			var response = completion.data.choices[0].message.content.trim()
 			if (response.length > 1500) response = response.slice(0, 1500) // If the response exceeds Discord's text limit
 			
-			// Prepare to save to conversation file
-			PreviousOpenAiModel.messages.push(msgFromUser)
-			PreviousOpenAiModel.messages.push({ "role": "assistant", "content": `${response}` })
+			// prepare bot's response
+			const msgFromBot = { "role": "assistant", "content": `${response}` }
 
+			// Prepare to save to conversation file
+			PreviousOpenAiModel.messages.push(msgFromBot)
+			whatToSend.push(msgFromBot)
 			// If there are too many conversations cut them in half
-			if (PreviousOpenAiModel.messages.length > MAX_CONVOS) PreviousOpenAiModel.messages = PreviousOpenAiModel.messages.slice(PreviousOpenAiModel.messages.length - (MAX_CONVOS/2))
+			if (whatToSend.length > MAX_CONVOS) whatToSend = whatToSend.slice(whatToSend.length - (MAX_CONVOS/2))
 
 			// Write to conversation file
-			const J = JSON.stringify(PreviousOpenAiModel)
+			const J = JSON.stringify({messages: whatToSend})
 			fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err) => {
 				if (err) return console.log(err);
 			});
