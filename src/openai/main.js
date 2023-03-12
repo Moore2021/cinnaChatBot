@@ -86,7 +86,7 @@ module.exports = {
 		const MAX_CONVOS = 6
 		
 		// Now add the user input
-		const enddingInstructions = ` - remove unnecessary parts in your response but still be exact`
+		const enddingInstructions = ` - dont talk in quotes and change your pattern of talking`
 		// const enddingInstructions = ``
 		const whatToSend = pastConvo.concat([{ "role": "user", "content": `${message.author.username} said: ${message.content}${enddingInstructions}` }])
 		console.log(whatToSend)
