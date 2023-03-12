@@ -1,4 +1,4 @@
-const { ApplicationCommandType, ApplicationCommandOptionType } = require(`discord.js`)
+const { ApplicationCommandType, ApplicationCommandOptionType, PermissionFlagsBits } = require(`discord.js`)
 const Nicknames = require(`../../../.data/nicknames.json`)
 const fs = require(`fs`)
     /**
@@ -6,27 +6,32 @@ const fs = require(`fs`)
      * @author klerikdust
      */
 module.exports = {
-    name: `nickname`,
-    description: `Recent the convo history`,
+    name: `adminnickname`,
+    description: `Change the nickname of a user`,
     type: ApplicationCommandType.ChatInput,
+    default_member_permissions: PermissionFlagsBits.Administrator.toString(),
     options: [
         {
             name: `set`,
             description: `What should be your nickname`,
             required:true,
             type: ApplicationCommandOptionType.String
+        },{
+            name: `user`,
+            description: `The user you would like to edit`,
+            required: true,
+            type: ApplicationCommandOptionType.User
         }
     ],
     async execute(interaction, client) {
         const userChosenNickName = interaction.options.getString(`set`)
-        const notAllowedNames = [`cinna`,`god`]
-        if (notAllowedNames.includes(userChosenNickName) && interaction.member.id != `221828709269766147`) return interaction.reply(`I'm sorry but that is not allowed please try another name.`)
-        Nicknames[interaction.member.id] = userChosenNickName
-        client.nicknames[interaction.member.id] = userChosenNickName
+        const userChosen = interaction.options.getUser(`user`)
+        Nicknames[userChosen.id] = userChosenNickName
+        client.nicknames[userChosen.id] = userChosenNickName
         const DataToSave = JSON.stringify(Nicknames)
         fs.writeFile('.data/nicknames.json', DataToSave, 'utf8', (err) => {
             if (err) return console.log(err);
         });
-        interaction.reply(`Okay I wrote down your nickname as ${userChosenNickName}`)
+        interaction.reply(`Okay I updated their nickname`)
     }
 }
