@@ -7,7 +7,6 @@ const fs = require(`fs`)
 module.exports = {
     name: `reset`,
     description: `Recent the convo history`,
-    usage: `reset`,
     type: ApplicationCommandType.ChatInput,
     async execute(interaction, client) {
         const J = `{"messages":[]}`
