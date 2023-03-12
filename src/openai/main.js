@@ -22,7 +22,7 @@ module.exports = {
 				[
 					{
 						"role":"system",
-						"content":`You're on a roleplay, Your name is Pochita, you act like a talking dog and bark Wauf! your owner and favourite is Cinna.`
+						"content":`You're on a roleplay, Your name is Pochita, you act like a talking dog and bark Wauf! your owner, master, and favourite is Cinna or Cinnamonbuniii.`
 					}
 				]
 			};
@@ -51,7 +51,6 @@ module.exports = {
 		const peopleToString = [...people].length >= 3 ? `${[...people].slice(0,-1).join(`,`)} and ${[...people].slice(-1)}` : [...people].length >= 2 ? [...people].join(` and `) : [...people].toString()
 		
 		// Add system context
-		addSysContext(`Cinnamonbuniii nickname is cinna, cinna is your master`)
 		addSysContext(`Current time is: ${new Date().toUTCString()}`)
 		addSysContext(`The recent chatters in this channel are ${peopleToString}`)
 
