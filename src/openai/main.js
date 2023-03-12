@@ -93,7 +93,7 @@ module.exports = {
 		const enddingInstructions = ` - dont talk in quotes and change your pattern of talking`
 
 		// Prepare the payload for api
-		const whatToSend = pastConvo.concat([{ "role": "user", "content": `${message.author.username} said: (${message.content})${enddingInstructions}` }])
+		const whatToSend = pastConvo.concat([{ "role": "user", "content": `${message.author.username} said: "${message.content}"${enddingInstructions}` }])
 
 		// Debug purpose
 		// console.debug(whatToSend)
