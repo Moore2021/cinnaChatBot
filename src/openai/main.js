@@ -3,7 +3,6 @@ const configuration = new Configuration({
 	apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
-
 const fs = require(`fs`)
 /**
  * Output bot's latency
@@ -14,9 +13,6 @@ module.exports = {
 	aliases: [],
 	description: `Get a response from OpenAi`,
 	permissionLevel: 0,
-	data: {
-		name: `main`
-	},
 	async execute(message, client) {
 		
 		const PreviousOpenAiModel = require(`../../.data/pochitaConvo.json`)
@@ -34,17 +30,15 @@ module.exports = {
 				[
 					{
 						"role":"system",
-						"content":`You're on a roleplay, your name is pochita, your owner is cinna, cinna is your favorite, you bark \"wauf\", act like a talking dog.`
+						"content":`You're on a roleplay, your name is pochita, your owner is cinna, cinna is your favorite, you bark \"wauf\" while acting like a talking dog.`
 					}
 				]
 			};
 		// Fetch who's in VC
-		// message.member.displayName
-		// message.member.voice.channel
 		const addSysContext = (str) =>{
-			console.log(str)
 			return startOpenAiModel.messages[0].content+=`\n, ${str}`
 		}
+
 		var DELETE_HISTORY = () =>{
 			const J = `{"messages":[]}`
 			fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err) => {
@@ -52,36 +46,14 @@ module.exports = {
 			});
 			message.channel.send(`I'm sorry but i think i was bonked by something and i forgot what we were saying`)
 		}
-		var isRepeating = (str = '') => {
-			if (!str.length) {
-				return false
-			};
-			for (let j = 1; (j <= str.length / 2); j++) {
-				if (str.length % j != 0) {
-					continue
-				};
-				let flag = true;
-				for (let i = j; i < str.length; ++i) {
-					if (str[i] != str[i - j]) {
-						flag = false;
-						break;
-					};
-				};
-				if (flag) {
-					DELETE_HISTORY();
-					return true;
-				};
-			};
-			return false;
-		};
 
 		addSysContext(`Cinnamonbuniii nickname is cinna, cinna is your master`)
 		addSysContext(`Current time is: ${new Date().toUTCString()}`)
 		addSysContext(`The recent chatters in this channel are ${peopleToString}`)
-		addSysContext(`${message.author.username} is connected to the VC ${message.member.voice.channel.name}`)
 		
 		// If people are in the same VC
 		if (message.member.voice.channel){
+			addSysContext(`${message.author.username} is connected to the VC ${message.member.voice.channel.name}`)
 			const membersInVC = message.member.voice.channel.members
 			var people_VC = new Set(membersInVC.map(m=>{if (!m.user.bot) {return `\"${m.user.username}\"`}else{return}} ))
 			people_VC = [...people_VC].filter(Boolean)
@@ -93,13 +65,10 @@ module.exports = {
 		}
 
 		// Nicknames
-		console.log(cachePeople)
 		var flat = cachePeople.join()
 		flat = flat.split(`,`)
 		var people_ids_noDup = new Set(flat)
 		people_ids_noDup = [...people_ids_noDup].filter(Boolean)
-		console.log(people_ids_noDup.length > 1)
-		console.log(people_ids_noDup)
 		if (people_ids_noDup.length > 1) {
 			for (const person of people_ids_noDup){
 				console.log(person)
@@ -118,12 +87,11 @@ module.exports = {
 		const MAX_CONVOS = 6
 		
 		// Now add the user input
-		const enddingInstructions = ` - remove unnecessary parts in your response`
+		const enddingInstructions = ` - remove unnecessary parts in your response but you still bark \"wauf\", act like a talking dog.`
+		// const enddingInstructions = ``
 		const whatToSend = pastConvo.concat([{ "role": "user", "content": `${message.author.username} said: ${message.content}${enddingInstructions}` }])
 		console.log(whatToSend)
 		if (PreviousOpenAiModel.messages.length > MAX_CONVOS) PreviousOpenAiModel.messages = PreviousOpenAiModel.messages.slice(PreviousOpenAiModel.messages.length - (MAX_CONVOS/2))
-
-		
 		message.channel.sendTyping()
 
 		try {
@@ -135,9 +103,6 @@ module.exports = {
 			},{timeout:50000});
 			var response = completion.data.choices[0].message.content
 			if (response.length > 1500) response = response.slice(0, 1500)
-			if (isRepeating(response)) {
-				return DELETE_HISTORY();
-			}
 			PreviousOpenAiModel.messages.push({ "role": "user", "content": `${message.author.username} said: ${message.content}${enddingInstructions}` })
 			PreviousOpenAiModel.messages.push({ "role": "assistant", "content": response })
 			if (PreviousOpenAiModel.messages.length > MAX_CONVOS) PreviousOpenAiModel.messages = PreviousOpenAiModel.messages.slice(PreviousOpenAiModel.messages.length - (MAX_CONVOS/2))

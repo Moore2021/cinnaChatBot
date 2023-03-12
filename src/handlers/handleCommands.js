@@ -12,7 +12,6 @@ const guildId = `1027066084945305691`
 
 module.exports = (client) => {
     client.handleCommands = async (commandFolders, path) => {
-        client.commandArray = [];
         for (folder of commandFolders) {
             const commandFiles = fs.readdirSync(`${path}/${folder}`).filter(file => file.endsWith(`.js`));
 
@@ -20,8 +19,7 @@ module.exports = (client) => {
                 const command = require(`../commands/${folder}/${file}`);
                 // set a new item in the collection
                 // with the key as the command name and the value as the exported module
-                client.commands.set(command.data.name, command);
-                client.commandArray.push(command.data.toJSON());
+                client.commands.set(command.name, command);
             }
         }
 
@@ -34,12 +32,12 @@ module.exports = (client) => {
                 console.log(`Started refreshing application (/) commands.`);
                 await rest.put(
                     Routes.applicationGuildCommands(clientId, testguildId), {
-                        body: client.commandArray
+                        body: client.commands
                     },
                 );
                 await rest.put(
                     Routes.applicationGuildCommands(clientId, guildId), {
-                        body: client.commandArray
+                        body: client.commands
                     },
                 );
 
