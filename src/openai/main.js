@@ -93,7 +93,8 @@ module.exports = {
 		const enddingInstructions = ` - dont talk in quotes and change your pattern of talking`
 
 		// Prepare the payload for api
-		const whatToSend = pastConvo.concat([{ "role": "user", "content": `${message.author.username} said: "${message.content}"${enddingInstructions}` }])
+		const msgFromUser = { "role": "user", "content": `${message.author.username} said: "${message.content}"${enddingInstructions}` }
+		const whatToSend = pastConvo.concat([msgFromUser])
 
 		// Debug purpose
 		// console.debug(whatToSend)
@@ -115,7 +116,7 @@ module.exports = {
 			if (response.length > 1500) response = response.slice(0, 1500) // If the response exceeds Discord's text limit
 			
 			// Prepare to save to conversation file
-			PreviousOpenAiModel.messages.push({ "role": "user", "content": `${message.author.username} said: ${message.content}${enddingInstructions}` })
+			PreviousOpenAiModel.messages.push(msgFromUser)
 			PreviousOpenAiModel.messages.push({ "role": "assistant", "content": `${response}` })
 
 			// If there are too many conversations cut them in half
