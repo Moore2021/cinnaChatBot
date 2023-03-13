@@ -4,7 +4,7 @@ const configuration = new Configuration({
 	organization: `org-qBMkn85qHyMzyS5dCvJLnvWl`,
 });
 const openai = new OpenAIApi(configuration);
-const { replaceRepeats, formatDate, deleteHistory, recentChatters, peopleInVC, writeToConvoLog, prepareUserMsg } = require(`../utils/openai.js`);
+const { deleteHistoryNoRecent, replaceRepeats, formatDate, deleteHistory, recentChatters, peopleInVC, writeToConvoLog, prepareUserMsg } = require(`../utils/openai.js`);
 /**
  * Return a response from the openAi Lib
  * @author Pan
@@ -15,25 +15,40 @@ module.exports = {
 	description: `Get a response from OpenAi`,
 	permissionLevel: 0,
 	async execute(message, client) {
-		var PreviousOpenAiModelMsgs = client.pastConvo.messages
+
+		async function testLastmessage() {
+			const lastMessage = await message.channel.messages.fetch({ limit: 10, cache: true });
+			const hasBot = new Set(lastMessage.map(m => { if (m.author.bot && m.author.id === `1021923602209194024`) { return true; }else{return false}}));
+			return hasBot.has(true)
+		}
+
+		var PreviousOpenAiModelMsgs = await testLastmessage() ? client.pastConvo.messages : deleteHistoryNoRecent(client)
 		const Nicknames = client.nicknames
 		const startOpenAiModel = {
 			"messages":
 				[
 					{
 						"role": "system",
-						"content": `You're on a roleplay, Your name is Pochita, you act like a talking dog and bark Wauf! your owner, master, and favourite is Cinna or cinna.`
+						"content": `You're on a roleplay, Your name is Pochita, you act like a talking dog and bark Wauf! your owner, master, and favourite is Cinna or cinna.\n`
 					}
 				]
 		};
 		const arrayMsg = startOpenAiModel.messages
 		/**
-		 * edit an object's inner property
+		 * edit an Object's inner property
 		 * @param {String} str
 		 * @returns {void}
 		 */
 		function addSysContext(str) {
-			return arrayMsg[0].content += `\n ${str}`.trim()
+			return arrayMsg[0].content += `\n, ${str.trim()}`
+		}
+
+		/**
+		 * Add a new line to an Object's inner property
+		 * @returns {void}
+		 */
+		function addLastSysContext() {
+			return arrayMsg[0].content += `\n`
 		}
 
 		// Add system context
@@ -49,7 +64,7 @@ module.exports = {
 			const otherPeopleToString = await peopleInVC(message, Nicknames);
 			addSysContext(`people in vc or voice chat: ${otherPeopleToString}.`);
 		}
-
+		addLastSysContext()
 		const MAX_CONVOS = 6;
 
 		// Prepare the payload for api
@@ -69,10 +84,10 @@ module.exports = {
 
 		try {
 			const finalJoin = [systemMsg].concat(PreviousOpenAiModelMsgs)
+			console.log(finalJoin)
 			const completion = await openai.createChatCompletion({
 				model: "gpt-3.5-turbo",
 				max_tokens: 2000,
-				frequency_penalty: -1.6,
 				messages: finalJoin
 			}, { timeout: 1200000 });
 
@@ -80,14 +95,15 @@ module.exports = {
 			var response = completion.data.choices[0].message.content.trim();
 			if (response.length > 1500) response = response.slice(0, 1500); // If the response exceeds Discord's text limit
 
+			const cleanContent = replaceRepeats(response)
 			// prepare bot's response
-			const msgFromBot = { "role": "assistant", "content": `${replaceRepeats(response)}` }
+			const msgFromBot = { "role": "assistant", "content": `${cleanContent}` }
 
 			// Prepare to save to conversation file
 			PreviousOpenAiModelMsgs.push(msgFromBot);
 			// If there are too many conversations cut them in half
-			PreviousOpenAiModelMsgs.length > MAX_CONVOS ? PreviousOpenAiModelMsgs.slice(PreviousOpenAiModelMsgs.length - (MAX_CONVOS / 2)) : PreviousOpenAiModelMsgs
-
+			PreviousOpenAiModelMsgs = PreviousOpenAiModelMsgs.length > MAX_CONVOS ? PreviousOpenAiModelMsgs.slice(3) : PreviousOpenAiModelMsgs
+			client.pastConvo.messages = PreviousOpenAiModelMsgs
 			// Write to conversation file
 			writeToConvoLog('.data/pochitaConvo.json', PreviousOpenAiModelMsgs);
 

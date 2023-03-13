@@ -7,7 +7,7 @@ const fs = require(`fs`)
  * @returns 
  */
 function addSysContext(ObjToAddTo, str) {
-    return ObjToAddTo += `\n, ${str}`.trim()
+    return ObjToAddTo += `\n, ${str}`
 }
 
 /**
@@ -25,6 +25,21 @@ function deleteHistory(client, message) {
     });
     message.channel.send(`I'm sorry but i think i was bonked by something and i forgot what we were saying`);
     return
+}
+
+/**
+ * Recent convo if the bot hasnt spoke
+ * @param {Object} client
+ * @returns {void}
+ */
+function deleteHistoryNoRecent(client) {
+    const J = `{"messages":[]}`;
+    client.pastConvo.messages = [];
+    fs.writeFile('.data/pochitaConvo.json', J, 'utf8', (err) => {
+        if (err)
+            return console.log(err);
+    });
+    return client.pastConvo.messages
 }
 
 /**
@@ -89,8 +104,8 @@ async function whatNicknameToUse(user_id, NICKNAMES, message) {
  * @returns {String | null}
  */
 async function recentChatters(message, Nicknames) {
-	const recentMsg = await message.channel.messages.fetch({ limit: 10, cache: true });
-	var people = new Set(recentMsg.map(m => { if (!m.author.bot) { return `${m.author.id}`; } else { return; } }));
+	const recentMsgs = await message.channel.messages.fetch({ limit: 10, cache: true });
+	var people = new Set(recentMsgs.map(m => { if (!m.author.bot) { return `${m.author.id}`; } else { return; } }));
 	people = [...people].filter(Boolean);
 	const userNames_chat = [];
 	for (let i = 0; i < people.length; i++) {
@@ -127,9 +142,9 @@ async function peopleInVC(message, Nicknames) {
  * @param {Object} whatToSend 
  * @returns 
  */
-function writeToConvoLog(filePath,whatToSend) {
+function writeToConvoLog(filePath, whatToSend) {
 	const J = JSON.stringify({ messages: whatToSend });
-	return fs.writeFile(filePath, replaceRepeats(J), 'utf8', (err) => {
+	return fs.writeFile(filePath, J, 'utf8', (err) => {
 		if (err)
 			return console.log(err);
 	});
@@ -142,7 +157,7 @@ function writeToConvoLog(filePath,whatToSend) {
  * @returns {Object}
  */
 async function prepareUserMsg(message, Nicknames) {
-	const enddingInstructions = ` - dont talk in quotes and change your pattern of talking`
+	const enddingInstructions = `\ndont talk in quotes and change your pattern of talking and remove unnecessary parts in your response`
 	const NicknameToUse = await whatNicknameToUse(message.author.id, Nicknames, message);
     message.content = replaceRepeats(message.content)
 	const msgFromUser = { "role": "user", "content": `${NicknameToUse} said: "${message.content.trim()}"${enddingInstructions}`.trim() };
@@ -168,5 +183,6 @@ module.exports = {
     peopleInVC,
     writeToConvoLog,
     prepareUserMsg,
-    replaceRepeats
+    replaceRepeats,
+    deleteHistoryNoRecent
 }
