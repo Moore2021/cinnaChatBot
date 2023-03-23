@@ -89,6 +89,8 @@ function formatDate(date) {
  * @returns 
  */
 async function whatNicknameToUse(user_id, NICKNAMES, message) {
+    if (message.webhookId == `1088044898491568189` && message.author.username == `cinnamonbuniii`) return `cinna`
+    if (message.webhookId == `1088044898491568189`) return message.author.username
     if (NICKNAMES[user_id])
         return NICKNAMES[user_id]
     const guildMember = await message.guild.members.fetch(user_id)

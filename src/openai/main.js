@@ -16,6 +16,10 @@ module.exports = {
 	permissionLevel: 0,
 	async execute(message, client) {
 
+		/**
+		 * Test the last 10 messages in current channel and see if one is the bot
+		 * @returns {Boolean}
+		 */
 		async function testLastmessage() {
 			const lastMessage = await message.channel.messages.fetch({ limit: 10, cache: true });
 			const hasBot = new Set(lastMessage.map(m => { if (m.author.bot && m.author.id === `1021923602209194024`) { return true; }else{return false}}));
@@ -60,9 +64,11 @@ module.exports = {
 
 		// Fetch who's in VC
 		// If people are in the same VC
-		if (message.member.voice.channel) {
-			const otherPeopleToString = await peopleInVC(message, Nicknames);
-			addSysContext(`people in vc or voice chat: ${otherPeopleToString}.`);
+		if (message.member) {
+			if (message.member.voice.channel) {
+				const otherPeopleToString = await peopleInVC(message, Nicknames);
+				addSysContext(`people in vc or voice chat: ${otherPeopleToString}.`);
+			}
 		}
 		addLastSysContext()
 		const MAX_CONVOS = 6;
@@ -87,7 +93,7 @@ module.exports = {
 			console.log(finalJoin)
 			const completion = await openai.createChatCompletion({
 				model: "gpt-3.5-turbo",
-				max_tokens: 2000,
+				max_tokens: message.webhookId == `1088044898491568189` ? 500 : 2000,
 				messages: finalJoin
 			}, { timeout: 1200000 });
 
