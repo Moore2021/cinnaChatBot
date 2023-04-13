@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "node index.js",
-    "start": "nodemon index.js"
+    "start": "nodemon index.js",
+    "prod": "pm2 start index.js --name \"production\" && echo \"Started production\""
   },
   "author": "thefrying_pan_",
   "license": "MIT",
